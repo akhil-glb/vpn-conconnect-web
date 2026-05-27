@@ -8,6 +8,7 @@ export default function Devices() {
   const { devices, isLoading, connected } = useLiveDevices();
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [enrollToken, setEnrollToken] = useState('');
+  const [copied, setCopied] = useState(false);
 
   const tokenMutation = useMutation({
     mutationFn: generateEnrollmentToken,
@@ -57,21 +58,34 @@ export default function Devices() {
             <div className="bg-gray-50 border rounded p-3 font-mono text-sm break-all mb-4">
               {enrollToken}
             </div>
-            <div className="flex gap-3 justify-end">
+            <div className="flex gap-3 justify-end items-center">
+              {copied && (
+                <span className="text-green-600 text-sm font-medium flex items-center gap-1">
+                  ✓ Copied to clipboard
+                </span>
+              )}
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(enrollToken).catch(() => {});
+                  navigator.clipboard.writeText(enrollToken).then(() => {
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 3000);
+                  }).catch(() => {});
                 }}
-                className="bg-white text-gray-700 border px-4 py-2 rounded hover:bg-gray-50"
+                className={`px-4 py-2 rounded border font-medium text-sm transition-colors ${
+                  copied
+                    ? 'bg-green-50 border-green-300 text-green-700'
+                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
               >
-                Copy
+                {copied ? '✓ Copied!' : 'Copy'}
               </button>
               <button
                 onClick={() => {
                   setShowTokenModal(false);
                   setEnrollToken('');
+                  setCopied(false);
                 }}
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-medium"
               >
                 Close
               </button>
