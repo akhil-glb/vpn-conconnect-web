@@ -1,0 +1,510 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getPolicy, createPolicy, updatePolicy } from '../api/policies';
+import SSIDList from '../components/policies/SSIDList';
+import SubnetList from '../components/policies/SubnetList';
+import type { VpnProfile } from '../types';
+
+type Tab = 'home' | 'applications' | 'behavior' | 'vpn';
+
+interface PolicyFormState {
+  name: string;
+  homeSSIDs: string[];
+  homeGateways: string[];
+  homeSubnets: string[];
+  blockOnHome: boolean;
+  blockOnUnknown: boolean;
+  allowOverride: boolean;
+  overrideDurationMinutes: number;
+  allowedApps: string[];
+  blockedApps: string[];
+  vpnProfiles: VpnProfile[];
+}
+
+const DEFAULT_FORM: PolicyFormState = {
+  name: '',
+  homeSSIDs: [],
+  homeGateways: [],
+  homeSubnets: [],
+  blockOnHome: true,
+  blockOnUnknown: true,
+  allowOverride: false,
+  overrideDurationMinutes: 60,
+  allowedApps: [],
+  blockedApps: [],
+  vpnProfiles: [],
+};
+
+export default function PolicyEditor() {
+  const { id } = useParams<{ id: string }>();
+  const isEdit = !!id;
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const [activeTab, setActiveTab] = useState<Tab>('home');
+  const [form, setForm] = useState<PolicyFormState>(DEFAULT_FORM);
+  const [newAllowedApp, setNewAllowedApp] = useState('');
+  const [newBlockedApp, setNewBlockedApp] = useState('');
+  const [newVpnProfile, setNewVpnProfile] = useState({ name: '', displayName: '' });
+  const [error, setError] = useState('');
+
+  const { data: existingPolicy } = useQuery({
+    queryKey: ['policy', id],
+    queryFn: () => getPolicy(id!),
+    enabled: isEdit,
+  });
+
+  useEffect(() => {
+    if (existingPolicy) {
+      setForm({
+        name: existingPolicy.name,
+        homeSSIDs: existingPolicy.homeSSIDs,
+        homeGateways: existingPolicy.homeGateways,
+        homeSubnets: existingPolicy.homeSubnets,
+        blockOnHome: existingPolicy.blockOnHome,
+        blockOnUnknown: existingPolicy.blockOnUnknown,
+        allowOverride: existingPolicy.allowOverride,
+        overrideDurationMinutes: existingPolicy.overrideDurationMinutes,
+        allowedApps: existingPolicy.allowedApps,
+        blockedApps: existingPolicy.blockedApps,
+        vpnProfiles: existingPolicy.vpnProfiles,
+      });
+    }
+  }, [existingPolicy]);
+
+  const saveMutation = useMutation({
+    mutationFn: () =>
+      isEdit ? updatePolicy(id!, form) : createPolicy(form),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['policies'] });
+      navigate('/policies');
+    },
+    onError: (err: unknown) => {
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      setError(axiosErr?.response?.data?.message ?? 'Failed to save policy.');
+    },
+  });
+
+  const setField = <K extends keyof PolicyFormState>(key: K, value: PolicyFormState[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'home', label: 'Home Network Rules' },
+    { id: 'applications', label: 'Applications' },
+    { id: 'behavior', label: 'Behavior' },
+    { id: 'vpn', label: 'VPN Profiles' },
+  ];
+
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-6">
+        {isEdit ? 'Edit Policy' : 'New Policy'}
+      </h1>
+
+      <div className="bg-white rounded-lg shadow p-6">
+        {/* Policy Name */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Policy Name</label>
+          <input
+            type="text"
+            value={form.name}
+            onChange={(e) => setField('name', e.target.value)}
+            placeholder="e.g. Standard Employee Policy"
+            className="border rounded px-3 py-2 w-full max-w-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        {/* Tabs */}
+        <div className="border-b mb-6">
+          <nav className="flex gap-0">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                  activeTab === tab.id
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Home Network Rules */}
+        {activeTab === 'home' && (
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Home SSIDs
+              </label>
+              <p className="text-xs text-gray-500 mb-2">
+                Wi-Fi network names that are considered "home" networks.
+              </p>
+              <SSIDList ssids={form.homeSSIDs} onChange={(v) => setField('homeSSIDs', v)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Home Gateways
+              </label>
+              <p className="text-xs text-gray-500 mb-2">
+                Gateway IP addresses that identify home networks (e.g. 192.168.1.1).
+              </p>
+              <SubnetList
+                subnets={form.homeGateways}
+                onChange={(v) => setField('homeGateways', v)}
+                placeholder="Add gateway IP..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Home Subnets
+              </label>
+              <p className="text-xs text-gray-500 mb-2">
+                Subnet ranges that identify home networks (e.g. 192.168.1.0/24).
+              </p>
+              <SubnetList
+                subnets={form.homeSubnets}
+                onChange={(v) => setField('homeSubnets', v)}
+                placeholder="Add subnet (CIDR)..."
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Applications */}
+        {activeTab === 'applications' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Always Allow */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Always Allow</h3>
+              <div className="space-y-1 mb-2">
+                {form.allowedApps.length === 0 && (
+                  <p className="text-sm text-gray-400 italic">No apps in allow list.</p>
+                )}
+                {form.allowedApps.map((app) => (
+                  <div
+                    key={app}
+                    className="flex items-center justify-between bg-green-50 border border-green-200 rounded px-3 py-1.5"
+                  >
+                    <span className="text-sm font-mono text-gray-700 truncate">{app}</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setField(
+                          'allowedApps',
+                          form.allowedApps.filter((a) => a !== app)
+                        )
+                      }
+                      className="text-red-500 hover:text-red-700 text-xs ml-2 shrink-0"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newAllowedApp}
+                  onChange={(e) => setNewAllowedApp(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const t = newAllowedApp.trim();
+                      if (t && !form.allowedApps.includes(t)) {
+                        setField('allowedApps', [...form.allowedApps, t]);
+                        setNewAllowedApp('');
+                      }
+                    }
+                  }}
+                  placeholder="App path or bundle ID..."
+                  className="border rounded px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const t = newAllowedApp.trim();
+                    if (t && !form.allowedApps.includes(t)) {
+                      setField('allowedApps', [...form.allowedApps, t]);
+                      setNewAllowedApp('');
+                    }
+                  }}
+                  className="bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 text-sm"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+
+            {/* Always Block */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Always Block</h3>
+              <div className="space-y-1 mb-2">
+                {form.blockedApps.length === 0 && (
+                  <p className="text-sm text-gray-400 italic">No apps in block list.</p>
+                )}
+                {form.blockedApps.map((app) => (
+                  <div
+                    key={app}
+                    className="flex items-center justify-between bg-red-50 border border-red-200 rounded px-3 py-1.5"
+                  >
+                    <span className="text-sm font-mono text-gray-700 truncate">{app}</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setField(
+                          'blockedApps',
+                          form.blockedApps.filter((a) => a !== app)
+                        )
+                      }
+                      className="text-red-500 hover:text-red-700 text-xs ml-2 shrink-0"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newBlockedApp}
+                  onChange={(e) => setNewBlockedApp(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const t = newBlockedApp.trim();
+                      if (t && !form.blockedApps.includes(t)) {
+                        setField('blockedApps', [...form.blockedApps, t]);
+                        setNewBlockedApp('');
+                      }
+                    }
+                  }}
+                  placeholder="App path or bundle ID..."
+                  className="border rounded px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const t = newBlockedApp.trim();
+                    if (t && !form.blockedApps.includes(t)) {
+                      setField('blockedApps', [...form.blockedApps, t]);
+                      setNewBlockedApp('');
+                    }
+                  }}
+                  className="bg-red-600 text-white px-3 py-2 rounded hover:bg-red-700 text-sm"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Behavior */}
+        {activeTab === 'behavior' && (
+          <div className="space-y-5">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.blockOnHome}
+                onChange={(e) => setField('blockOnHome', e.target.checked)}
+                className="mt-0.5"
+              />
+              <div>
+                <span className="text-sm font-medium text-gray-700">Block on home network</span>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Internet access will be blocked when the device is detected on a home network.
+                </p>
+              </div>
+            </label>
+
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.blockOnUnknown}
+                onChange={(e) => setField('blockOnUnknown', e.target.checked)}
+                className="mt-0.5"
+              />
+              <div>
+                <span className="text-sm font-medium text-gray-700">Block on unknown network</span>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Internet access will be blocked on networks not recognized as office or home.
+                </p>
+              </div>
+            </label>
+
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.allowOverride}
+                onChange={(e) => setField('allowOverride', e.target.checked)}
+                className="mt-0.5"
+              />
+              <div>
+                <span className="text-sm font-medium text-gray-700">Allow override</span>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Administrators can grant temporary access overrides to individual devices.
+                </p>
+              </div>
+            </label>
+
+            {form.allowOverride && (
+              <div className="ml-7">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Default override duration (minutes)
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={1440}
+                  value={form.overrideDurationMinutes}
+                  onChange={(e) =>
+                    setField('overrideDurationMinutes', Number(e.target.value))
+                  }
+                  className="border rounded px-3 py-2 w-32 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* VPN Profiles */}
+        {activeTab === 'vpn' && (
+          <div>
+            <div className="space-y-2 mb-4">
+              {form.vpnProfiles.length === 0 && (
+                <p className="text-sm text-gray-400 italic">No VPN profiles configured.</p>
+              )}
+              {form.vpnProfiles.map((profile, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center gap-3 bg-gray-50 border rounded p-3"
+                >
+                  <input
+                    type="radio"
+                    name="defaultVpn"
+                    checked={profile.isDefault}
+                    onChange={() =>
+                      setField(
+                        'vpnProfiles',
+                        form.vpnProfiles.map((p, i) => ({ ...p, isDefault: i === idx }))
+                      )
+                    }
+                    title="Set as default"
+                  />
+                  <div className="flex-1 grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs text-gray-500">Internal name</label>
+                      <p className="text-sm font-mono">{profile.name}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500">Display name</label>
+                      <p className="text-sm">{profile.displayName}</p>
+                    </div>
+                  </div>
+                  {profile.isDefault && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                      Default
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setField(
+                        'vpnProfiles',
+                        form.vpnProfiles.filter((_, i) => i !== idx)
+                      )
+                    }
+                    className="text-red-500 hover:text-red-700 text-sm"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="border rounded p-4 bg-gray-50">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Add VPN Profile</h3>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Internal name</label>
+                  <input
+                    type="text"
+                    value={newVpnProfile.name}
+                    onChange={(e) =>
+                      setNewVpnProfile((prev) => ({ ...prev, name: e.target.value }))
+                    }
+                    placeholder="corp-vpn"
+                    className="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Display name</label>
+                  <input
+                    type="text"
+                    value={newVpnProfile.displayName}
+                    onChange={(e) =>
+                      setNewVpnProfile((prev) => ({ ...prev, displayName: e.target.value }))
+                    }
+                    placeholder="Corporate VPN"
+                    className="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const n = newVpnProfile.name.trim();
+                  const d = newVpnProfile.displayName.trim();
+                  if (n && d) {
+                    const isDefault = form.vpnProfiles.length === 0;
+                    setField('vpnProfiles', [
+                      ...form.vpnProfiles,
+                      { name: n, displayName: d, isDefault },
+                    ]);
+                    setNewVpnProfile({ name: '', displayName: '' });
+                  }
+                }}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm"
+              >
+                Add Profile
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Error */}
+        {error && (
+          <div className="mt-4 bg-red-50 border border-red-200 text-red-700 rounded px-3 py-2 text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Save */}
+        <div className="flex gap-3 mt-8 pt-6 border-t">
+          <button
+            type="button"
+            onClick={() => saveMutation.mutate()}
+            disabled={saveMutation.isPending || !form.name.trim()}
+            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50 font-medium"
+          >
+            {saveMutation.isPending ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Policy'}
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/policies')}
+            className="bg-white text-gray-700 border px-4 py-2 rounded hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

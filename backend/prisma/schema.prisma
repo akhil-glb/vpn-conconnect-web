@@ -1,0 +1,206 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id          String      @id @default(cuid())
+  name        String
+  slug        String      @unique
+  plan        PlanType    @default(FREE)
+  maxDevices  Int         @default(10)
+  createdAt   DateTime    @default(now())
+  suspendedAt DateTime?
+
+  admins      AdminUser[]
+  groups      Group[]
+  policies    Policy[]
+  devices     Device[]
+  auditLogs   AuditLog[]
+  vpnSessions VpnSession[]
+}
+
+enum PlanType {
+  FREE
+  PRO
+  BUSINESS
+  ENTERPRISE
+}
+
+model AdminUser {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  passwordHash String
+  role         AdminRole     @default(VIEWER)
+  org          Organization? @relation(fields: [orgId], references: [id])
+  orgId        String?
+  createdAt    DateTime      @default(now())
+  auditLogs    AuditLog[]
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  VIEWER
+}
+
+model Policy {
+  id                      String       @id @default(cuid())
+  org                     Organization @relation(fields: [orgId], references: [id])
+  orgId                   String
+  name                    String
+  homeSSIDs               String[]
+  homeGateways            String[]
+  homeSubnets             String[]
+  blockOnHome             Boolean      @default(true)
+  blockOnUnknown          Boolean      @default(true)
+  vpnProfiles             Json         @default("[]")
+  allowOverride           Boolean      @default(false)
+  overrideDurationMinutes Int          @default(30)
+  allowedApps             String[]     @default([])
+  blockedApps             String[]     @default([])
+  version                 Int          @default(1)
+  updatedAt               DateTime     @updatedAt
+  groups                  Group[]
+
+  @@unique([orgId, name])
+}
+
+model Group {
+  id        String       @id @default(cuid())
+  org       Organization @relation(fields: [orgId], references: [id])
+  orgId     String
+  name      String
+  policy    Policy       @relation(fields: [policyId], references: [id])
+  policyId  String
+  devices   Device[]
+  createdAt DateTime     @default(now())
+
+  @@unique([orgId, name])
+}
+
+model Device {
+  id          String         @id @default(cuid())
+  org         Organization   @relation(fields: [orgId], references: [id])
+  orgId       String
+  name        String
+  os          OsType
+  enrolledAt  DateTime       @default(now())
+  lastSeenAt  DateTime?
+  tokenHash   String         @unique
+  group       Group?         @relation(fields: [groupId], references: [id])
+  groupId     String?
+  revoked     Boolean        @default(false)
+  statuses    DeviceStatus[]
+  auditLogs   AuditLog[]
+  vpnSessions VpnSession[]
+
+  @@index([orgId])
+}
+
+enum OsType {
+  WINDOWS
+  MACOS
+  LINUX
+}
+
+model DeviceStatus {
+  id            String        @id @default(cuid())
+  device        Device        @relation(fields: [deviceId], references: [id])
+  deviceId      String
+  networkType   NetworkType
+  internetState InternetState
+  vpnState      VpnState
+  vpnProfile    String?
+  ssid          String?
+  localIP       String?
+  gatewayIP     String?
+  reportedAt    DateTime      @default(now())
+
+  @@index([deviceId, reportedAt])
+}
+
+enum NetworkType {
+  HOME
+  OFFICE
+  UNKNOWN
+}
+
+enum InternetState {
+  ALLOWED
+  BLOCKED
+}
+
+enum VpnState {
+  CONNECTED
+  DISCONNECTED
+  CONNECTING
+  ERROR
+}
+
+model VpnSession {
+  id                String             @id @default(cuid())
+  org               Organization       @relation(fields: [orgId], references: [id])
+  orgId             String
+  device            Device             @relation(fields: [deviceId], references: [id])
+  deviceId          String
+  vpnProfileName    String?
+  vpnProfileDisplay String?
+  networkAtConnect  NetworkType?
+  ssidAtConnect     String?
+  connectedAt       DateTime
+  disconnectedAt    DateTime?
+  durationSeconds   Int?
+  terminatedBy      TerminationReason?
+
+  @@index([orgId, connectedAt])
+  @@index([deviceId, connectedAt])
+  @@index([orgId, disconnectedAt])
+}
+
+enum TerminationReason {
+  USER_DISCONNECT
+  NETWORK_CHANGE
+  DEVICE_OFFLINE
+  ADMIN_REVOKE
+  SERVICE_RESTART
+}
+
+model AuditLog {
+  id        String       @id @default(cuid())
+  org       Organization @relation(fields: [orgId], references: [id])
+  orgId     String
+  device    Device?      @relation(fields: [deviceId], references: [id])
+  deviceId  String?
+  admin     AdminUser?   @relation(fields: [adminId], references: [id])
+  adminId   String?
+  event     AuditEvent
+  detail    Json?
+  timestamp DateTime     @default(now())
+
+  @@index([orgId, timestamp])
+  @@index([deviceId, timestamp])
+}
+
+enum AuditEvent {
+  DEVICE_ENROLLED
+  DEVICE_REVOKED
+  INTERNET_BLOCKED
+  INTERNET_ALLOWED
+  VPN_CONNECTED
+  VPN_DISCONNECTED
+  MANUAL_OVERRIDE
+  POLICY_UPDATED
+  GROUP_CHANGED
+  ADMIN_LOGIN
+  ADMIN_LOGOUT
+  UPDATE_APPLIED
+  APP_RULE_CHANGED
+  ORG_CREATED
+  ORG_SUSPENDED
+  PLAN_CHANGED
+}

@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+**/dist/
+build/
+**/build/
+
+# Environment files — never commit secrets
+.env
+**/.env
+!.env.example
+
+# Deployment script — contains server credentials
+deploy.ps1
+
+# Logs
+*.log
+logs/
+**/logs/
+
+# PM2
+.pm2/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Prisma generated (keep schema, exclude migrations lock)
+backend/prisma/migrations/**/migration_lock.toml
+
+# TypeScript build info
+*.tsbuildinfo
