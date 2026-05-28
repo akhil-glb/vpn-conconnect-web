@@ -2,13 +2,13 @@ import apiClient from './client';
 import type { Policy } from '../types';
 
 export async function getPolicies(): Promise<Policy[]> {
-  const response = await apiClient.get<Policy[]>('/policies');
-  return response.data;
+  const response = await apiClient.get<{ policies: Policy[] }>('/policies');
+  return response.data.policies;
 }
 
 export async function getPolicy(id: string): Promise<Policy> {
-  const response = await apiClient.get<Policy>(`/policies/${id}`);
-  return response.data;
+  const response = await apiClient.get<{ policy: Policy }>(`/policies/${id}`);
+  return response.data.policy;
 }
 
 type PolicyCreateData = Omit<Policy, 'id' | 'orgId' | 'version' | 'updatedAt' | 'adminPinHash'> & {
@@ -19,13 +19,13 @@ type PolicyUpdateData = Partial<Omit<Policy, 'id' | 'orgId' | 'version' | 'updat
 };
 
 export async function createPolicy(data: PolicyCreateData): Promise<Policy> {
-  const response = await apiClient.post<Policy>('/policies', data);
-  return response.data;
+  const response = await apiClient.post<{ policy: Policy }>('/policies', data);
+  return response.data.policy;
 }
 
 export async function updatePolicy(id: string, data: PolicyUpdateData): Promise<Policy> {
-  const response = await apiClient.put<Policy>(`/policies/${id}`, data);
-  return response.data;
+  const response = await apiClient.put<{ policy: Policy }>(`/policies/${id}`, data);
+  return response.data.policy;
 }
 
 export async function deletePolicy(id: string): Promise<void> {
