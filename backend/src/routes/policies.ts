@@ -1,5 +1,9 @@
 import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
+import { createHash } from 'crypto';
 import { z } from 'zod';
+
+const hashPin = (pin: string) =>
+  createHash('sha256').update(pin).digest('hex');
 import {
   listPolicies,
   getPolicy,
@@ -21,6 +25,8 @@ const policyBodySchema = z.object({
   overrideDurationMinutes: z.number().int().min(1).max(1440).optional(),
   allowedApps: z.array(z.string()).optional(),
   blockedApps: z.array(z.string()).optional(),
+  // Plain-text PIN: backend hashes it. null = clear the PIN.
+  adminPin: z.string().nullable().optional(),
 });
 
 const policyUpdateSchema = policyBodySchema.partial();
@@ -63,7 +69,18 @@ const policiesRoutes: FastifyPluginAsync = async (fastify) => {
           return reply.status(400).send({ error: 'Invalid request body', details: parsed.error.flatten() });
         }
 
-        const policy = await createPolicy(fastify.prisma, parsed.data, orgId, user.userId);
+        const { adminPin, ...rest } = parsed.data;
+        if (adminPin && adminPin.length < 4) {
+          return reply.status(400).send({ error: 'Admin PIN must be at least 4 characters' });
+        }
+        const serviceData = {
+          ...rest,
+          adminPinHash: adminPin === null ? null
+                      : adminPin       ? hashPin(adminPin)
+                      : undefined,
+        };
+
+        const policy = await createPolicy(fastify.prisma, serviceData, orgId, user.userId);
         return reply.status(201).send({ policy });
       } catch (err) {
         fastify.log.error({ err }, 'Create policy error');
@@ -111,7 +128,18 @@ const policiesRoutes: FastifyPluginAsync = async (fastify) => {
           return reply.status(400).send({ error: 'Invalid request body', details: parsed.error.flatten() });
         }
 
-        const policy = await updatePolicy(fastify.prisma, req.params.id, parsed.data, orgId, user.userId);
+        const { adminPin, ...rest } = parsed.data;
+        if (adminPin && adminPin.length < 4) {
+          return reply.status(400).send({ error: 'Admin PIN must be at least 4 characters' });
+        }
+        const serviceData = {
+          ...rest,
+          ...(adminPin !== undefined && {
+            adminPinHash: adminPin === null ? null : hashPin(adminPin),
+          }),
+        };
+
+        const policy = await updatePolicy(fastify.prisma, req.params.id, serviceData, orgId, user.userId);
         if (!policy) return reply.status(404).send({ error: 'Policy not found' });
 
         return reply.send({ policy });

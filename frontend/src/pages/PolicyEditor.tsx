@@ -47,6 +47,9 @@ export default function PolicyEditor() {
   const [newAllowedApp, setNewAllowedApp] = useState('');
   const [newBlockedApp, setNewBlockedApp] = useState('');
   const [newVpnProfile, setNewVpnProfile] = useState({ name: '', displayName: '' });
+  const [adminPin, setAdminPin] = useState('');
+  const [adminPinConfirm, setAdminPinConfirm] = useState('');
+  const [clearPin, setClearPin] = useState(false);
   const [error, setError] = useState('');
 
   const { data: existingPolicy } = useQuery({
@@ -74,13 +77,27 @@ export default function PolicyEditor() {
   }, [existingPolicy]);
 
   const saveMutation = useMutation({
-    mutationFn: () =>
-      isEdit ? updatePolicy(id!, form) : createPolicy(form),
+    mutationFn: () => {
+      // Resolve admin PIN payload
+      let resolvedAdminPin: string | null | undefined;
+      if (clearPin) {
+        resolvedAdminPin = null;             // explicitly remove PIN
+      } else if (adminPin.trim()) {
+        if (adminPin.length < 4) throw new Error('Admin PIN must be at least 4 characters.');
+        if (adminPin !== adminPinConfirm) throw new Error('Admin PINs do not match.');
+        resolvedAdminPin = adminPin;         // set new PIN
+      }
+      // resolvedAdminPin === undefined → don't change existing PIN
+
+      const payload = { ...form, adminPin: resolvedAdminPin };
+      return isEdit ? updatePolicy(id!, payload) : createPolicy(payload);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['policies'] });
       navigate('/policies');
     },
     onError: (err: unknown) => {
+      if (err instanceof Error) { setError(err.message); return; }
       const axiosErr = err as { response?: { data?: { message?: string } } };
       setError(axiosErr?.response?.data?.message ?? 'Failed to save policy.');
     },
@@ -371,6 +388,58 @@ export default function PolicyEditor() {
                 />
               </div>
             )}
+
+            {/* Admin PIN */}
+            <div className="border-t pt-5 mt-2">
+              <h3 className="text-sm font-semibold text-gray-700 mb-1">Tray Admin PIN</h3>
+              <p className="text-xs text-gray-500 mb-3">
+                Users must enter this PIN in the tray app to access Settings, Manual Override,
+                and other admin features. Leave blank to keep the existing PIN.
+                {isEdit && existingPolicy?.adminPinHash && (
+                  <span className="ml-1 text-blue-600 font-medium">A PIN is currently set.</span>
+                )}
+                {isEdit && !existingPolicy?.adminPinHash && (
+                  <span className="ml-1 text-gray-400">(No PIN set — default PIN is in use.)</span>
+                )}
+              </p>
+              <div className={`space-y-3 ${clearPin ? 'opacity-40 pointer-events-none' : ''}`}>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">New PIN (min 4 characters)</label>
+                  <input
+                    type="password"
+                    value={adminPin}
+                    onChange={(e) => setAdminPin(e.target.value)}
+                    placeholder="Enter new PIN…"
+                    autoComplete="new-password"
+                    className="border rounded px-3 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Confirm PIN</label>
+                  <input
+                    type="password"
+                    value={adminPinConfirm}
+                    onChange={(e) => setAdminPinConfirm(e.target.value)}
+                    placeholder="Confirm PIN…"
+                    autoComplete="new-password"
+                    className="border rounded px-3 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                </div>
+              </div>
+              {isEdit && existingPolicy?.adminPinHash && (
+                <label className="flex items-center gap-2 mt-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={clearPin}
+                    onChange={(e) => {
+                      setClearPin(e.target.checked);
+                      if (e.target.checked) { setAdminPin(''); setAdminPinConfirm(''); }
+                    }}
+                  />
+                  <span className="text-sm text-red-600">Remove PIN (revert to default)</span>
+                </label>
+              )}
+            </div>
           </div>
         )}
 

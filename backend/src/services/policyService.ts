@@ -13,6 +13,7 @@ export interface PolicyInput {
   overrideDurationMinutes?: number;
   allowedApps?: string[];
   blockedApps?: string[];
+  adminPinHash?: string | null;
 }
 
 export async function listPolicies(prisma: PrismaClient, orgId: string) {
@@ -58,6 +59,7 @@ export async function createPolicy(
       overrideDurationMinutes: data.overrideDurationMinutes ?? 30,
       allowedApps: data.allowedApps ?? [],
       blockedApps: data.blockedApps ?? [],
+      adminPinHash: data.adminPinHash ?? null,
     },
   });
 
@@ -103,6 +105,7 @@ export async function updatePolicy(
       }),
       ...(data.allowedApps !== undefined && { allowedApps: data.allowedApps }),
       ...(data.blockedApps !== undefined && { blockedApps: data.blockedApps }),
+      ...(data.adminPinHash !== undefined && { adminPinHash: data.adminPinHash }),
       version: { increment: 1 },
     },
   });

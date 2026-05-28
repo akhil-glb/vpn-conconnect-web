@@ -2,8 +2,8 @@ import apiClient from './client';
 import type { Group } from '../types';
 
 export async function getGroups(): Promise<Group[]> {
-  const response = await apiClient.get<Group[]>('/groups');
-  return response.data;
+  const response = await apiClient.get<{ groups: Group[] }>('/groups');
+  return response.data.groups;
 }
 
 export async function createGroup(data: { name: string; policyId: string }): Promise<Group> {

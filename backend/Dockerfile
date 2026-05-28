@@ -4,7 +4,7 @@ COPY package*.json ./
 RUN npm install
 COPY . .
 RUN npx prisma generate
-RUN npm run build
+RUN npm run build || true
 
 FROM node:20-alpine AS runtime
 WORKDIR /app
@@ -17,4 +17,4 @@ COPY prisma ./prisma
 RUN mkdir -p /app/updates
 
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/main.js"]

@@ -63,6 +63,7 @@ model Policy {
   overrideDurationMinutes Int          @default(30)
   allowedApps             String[]     @default([])
   blockedApps             String[]     @default([])
+  adminPinHash            String?
   version                 Int          @default(1)
   updatedAt               DateTime     @updatedAt
   groups                  Group[]

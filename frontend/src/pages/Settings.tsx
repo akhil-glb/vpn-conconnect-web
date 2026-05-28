@@ -19,8 +19,11 @@ export default function Settings() {
   const [enrollToken, setEnrollToken] = useState('');
   const [showToken, setShowToken] = useState(false);
   const [inviteForm, setInviteForm] = useState<InviteFormState>({ email: '', role: 'ADMIN' });
+  const [invitePassword, setInvitePassword] = useState('');
   const [inviteError, setInviteError] = useState('');
   const [orgName, setOrgName] = useState('');
+  const [resetTarget, setResetTarget] = useState<{ id: string; email: string } | null>(null);
+  const [newPassword, setNewPassword] = useState('');
   const [orgSaved, setOrgSaved] = useState(false);
 
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
@@ -28,8 +31,8 @@ export default function Settings() {
   const { data: admins = [], isLoading: adminsLoading } = useQuery<AdminUser[]>({
     queryKey: ['admins'],
     queryFn: async () => {
-      const res = await apiClient.get<AdminUser[]>('/api/admins');
-      return res.data;
+      const res = await apiClient.get<{ admins: AdminUser[] }>('/org/admins');
+      return res.data.admins;
     },
     enabled: activeTab === 'admins',
   });
@@ -37,8 +40,8 @@ export default function Settings() {
   const { data: org } = useQuery<{ id: string; name: string; slug: string }>({
     queryKey: ['org'],
     queryFn: async () => {
-      const res = await apiClient.get('/api/org');
-      return res.data;
+      const res = await apiClient.get<{ org: { id: string; name: string; slug: string } }>('/org');
+      return res.data.org;
     },
     enabled: activeTab === 'organization',
   });
@@ -56,23 +59,24 @@ export default function Settings() {
   });
 
   const inviteMutation = useMutation({
-    mutationFn: async (data: InviteFormState) => {
-      await apiClient.post('/api/admins/invite', data);
+    mutationFn: async (data: InviteFormState & { password: string }) => {
+      await apiClient.post('/org/admins', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admins'] });
       setInviteForm({ email: '', role: 'ADMIN' });
+      setInvitePassword('');
       setInviteError('');
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { message?: string } } };
-      setInviteError(axiosErr?.response?.data?.message ?? 'Failed to invite admin.');
+      const axiosErr = err as { response?: { data?: { error?: string } } };
+      setInviteError(axiosErr?.response?.data?.error ?? 'Failed to invite admin.');
     },
   });
 
   const removeAdminMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiClient.delete(`/api/admins/${id}`);
+      await apiClient.delete(`/org/admins/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admins'] });
@@ -81,16 +85,26 @@ export default function Settings() {
 
   const changeRoleMutation = useMutation({
     mutationFn: async ({ id, role }: { id: string; role: string }) => {
-      await apiClient.put(`/api/admins/${id}/role`, { role });
+      await apiClient.put(`/org/admins/${id}/role`, { role });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admins'] });
     },
   });
 
+  const resetPasswordMutation = useMutation({
+    mutationFn: async ({ id, password }: { id: string; password: string }) => {
+      await apiClient.patch(`/org/admins/${id}/password`, { newPassword: password });
+    },
+    onSuccess: () => {
+      setResetTarget(null);
+      setNewPassword('');
+    },
+  });
+
   const saveOrgMutation = useMutation({
     mutationFn: async (name: string) => {
-      await apiClient.put('/api/org', { name });
+      await apiClient.put('/org', { name });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['org'] });
@@ -179,13 +193,21 @@ export default function Settings() {
                       {isAdmin && (
                         <td className="p-3 border-b">
                           {admin.id !== user?.id && (
-                            <button
-                              onClick={() => removeAdminMutation.mutate(admin.id)}
-                              disabled={removeAdminMutation.isPending}
-                              className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 disabled:opacity-50"
-                            >
-                              Remove
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => setResetTarget({ id: admin.id, email: admin.email })}
+                                className="bg-yellow-500 text-white px-3 py-1 rounded text-sm hover:bg-yellow-600"
+                              >
+                                Reset pwd
+                              </button>
+                              <button
+                                onClick={() => removeAdminMutation.mutate(admin.id)}
+                                disabled={removeAdminMutation.isPending}
+                                className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 disabled:opacity-50"
+                              >
+                                Remove
+                              </button>
+                            </div>
                           )}
                         </td>
                       )}
@@ -222,12 +244,22 @@ export default function Settings() {
                       <option value="VIEWER">Viewer</option>
                     </select>
                   </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Initial Password</label>
+                    <input
+                      type="password"
+                      value={invitePassword}
+                      onChange={(e) => setInvitePassword(e.target.value)}
+                      placeholder="Min 8 characters"
+                      className="border rounded px-3 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                  </div>
                   <button
-                    onClick={() => inviteMutation.mutate(inviteForm)}
-                    disabled={inviteMutation.isPending || !inviteForm.email}
+                    onClick={() => inviteMutation.mutate({ ...inviteForm, password: invitePassword })}
+                    disabled={inviteMutation.isPending || !inviteForm.email || invitePassword.length < 8}
                     className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 text-sm"
                   >
-                    {inviteMutation.isPending ? 'Inviting...' : 'Send Invite'}
+                    {inviteMutation.isPending ? 'Creating...' : 'Create Admin'}
                   </button>
                 </div>
                 {inviteError && (
@@ -385,6 +417,42 @@ export default function Settings() {
           </div>
         )}
       </div>
+
+      {/* Reset password modal */}
+      {resetTarget && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-96">
+            <h3 className="text-base font-semibold mb-3">
+              Reset password for {resetTarget.email}
+            </h3>
+            <input
+              type="password"
+              placeholder="New password (min 8 chars)"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="border rounded px-3 py-2 w-full mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => { setResetTarget(null); setNewPassword(''); }}
+                className="px-4 py-2 border rounded text-sm hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => resetPasswordMutation.mutate({ id: resetTarget.id, password: newPassword })}
+                disabled={newPassword.length < 8 || resetPasswordMutation.isPending}
+                className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50"
+              >
+                {resetPasswordMutation.isPending ? 'Saving...' : 'Reset Password'}
+              </button>
+            </div>
+            {resetPasswordMutation.isError && (
+              <p className="text-red-600 text-sm mt-2">Failed to reset password.</p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

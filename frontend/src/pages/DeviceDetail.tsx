@@ -204,7 +204,8 @@ export default function DeviceDetail() {
         </div>
       </div>
 
-      {/* Override Controls */}
+      {/* Override Controls — ADMIN only */}
+      {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-base font-semibold text-gray-700 mb-4">Override Controls</h2>
         <div className="flex items-center gap-4 flex-wrap">
@@ -238,6 +239,7 @@ export default function DeviceDetail() {
           )}
         </div>
       </div>
+      )}
 
       {/* Group Assignment (ADMIN only) */}
       {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (

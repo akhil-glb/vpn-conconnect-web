@@ -76,18 +76,24 @@ const vpnSessionsRoutes: FastifyPluginAsync = async (fastify) => {
 
         const skip = (page - 1) * limit;
 
-        const [total, sessions] = await Promise.all([
+        const [total, rawSessions] = await Promise.all([
           fastify.prisma.vpnSession.count({ where }),
           fastify.prisma.vpnSession.findMany({
             where,
             include: {
-              device: { select: { id: true, name: true, os: true } },
+              device: { select: { id: true, name: true, os: true, group: { select: { id: true, name: true } } } },
             },
             orderBy: { connectedAt: 'desc' },
             skip,
             take: limit,
           }),
         ]);
+
+        const sessions = rawSessions.map(({ device, ...s }) => ({
+          ...s,
+          deviceName: device.name,
+          groupName: device.group?.name ?? null,
+        }));
 
         return reply.send({ sessions, total, page, limit });
       } catch (err) {

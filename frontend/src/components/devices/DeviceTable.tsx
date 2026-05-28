@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Device } from '../../types';
@@ -29,12 +29,17 @@ function formatLastSeen(ts: string | null): string {
   return `${diffDay}d ago`;
 }
 
+const PAGE_SIZE = 20;
+
 export default function DeviceTable({ devices }: DeviceTableProps) {
   const [search, setSearch] = useState('');
   const [filterGroup, setFilterGroup] = useState('');
   const [filterOS, setFilterOS] = useState('');
   const [confirmRevokeId, setConfirmRevokeId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
   const queryClient = useQueryClient();
+
+  useEffect(() => { setPage(1); }, [search, filterGroup, filterOS]);
 
   const revokeMutation = useMutation({
     mutationFn: (id: string) => revokeDevice(id),
@@ -58,6 +63,9 @@ export default function DeviceTable({ devices }: DeviceTableProps) {
       if (!b.lastSeenAt) return -1;
       return new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime();
     });
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div>
@@ -107,14 +115,14 @@ export default function DeviceTable({ devices }: DeviceTableProps) {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 && (
+            {paged.length === 0 && (
               <tr>
                 <td colSpan={7} className="p-6 text-center text-gray-500">
                   No devices found.
                 </td>
               </tr>
             )}
-            {filtered.map((device) => (
+            {paged.map((device) => (
               <tr key={device.id} className={`hover:bg-gray-50 ${device.revoked ? 'opacity-50' : ''}`}>
                 <td className="p-3 border-b">
                   <Link
@@ -164,6 +172,31 @@ export default function DeviceTable({ devices }: DeviceTableProps) {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
+          <span>
+            Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => p - 1)}
+              disabled={page === 1}
+              className="px-3 py-1 border rounded disabled:opacity-40 hover:bg-gray-50"
+            >
+              ← Prev
+            </button>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page === totalPages}
+              className="px-3 py-1 border rounded disabled:opacity-40 hover:bg-gray-50"
+            >
+              Next →
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Confirm revoke dialog */}
       {confirmRevokeId && (

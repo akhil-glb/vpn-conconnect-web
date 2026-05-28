@@ -1,6 +1,7 @@
 import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { AdminRole } from '@prisma/client';
+import bcrypt from 'bcrypt';
 import { createAdminUser } from '../services/authService';
 import { JwtPayload } from '../types';
 
@@ -238,6 +239,46 @@ const orgRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.send({ admin: updated });
       } catch (err) {
         fastify.log.error({ err }, 'Change admin role error');
+        return reply.status(500).send({ error: 'Internal server error' });
+      }
+    }
+  );
+  // PATCH /org/admins/:id/password — reset another admin's password
+  fastify.patch(
+    '/admins/:id/password',
+    { preHandler: [fastify.authenticate] },
+    async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+      try {
+        requireAdminOrHigher(req, reply);
+        if (reply.sent) return;
+
+        const orgId = req.orgId;
+        if (!orgId) return reply.status(403).send({ error: 'Organization context required' });
+
+        const parsed = z.object({ newPassword: z.string().min(8) }).safeParse(req.body);
+        if (!parsed.success) {
+          return reply.status(400).send({ error: 'Invalid body', details: parsed.error.flatten() });
+        }
+
+        const currentUser = req.user as JwtPayload;
+        if (req.params.id === currentUser.userId) {
+          return reply.status(400).send({ error: 'Use account settings to change your own password' });
+        }
+
+        const admin = await fastify.prisma.adminUser.findFirst({
+          where: { id: req.params.id, orgId },
+        });
+        if (!admin) return reply.status(404).send({ error: 'Admin not found' });
+
+        const hash = await bcrypt.hash(parsed.data.newPassword, 12);
+        await fastify.prisma.adminUser.update({
+          where: { id: req.params.id },
+          data: { passwordHash: hash },
+        });
+
+        return reply.status(204).send();
+      } catch (err) {
+        fastify.log.error({ err }, 'Reset admin password error');
         return reply.status(500).send({ error: 'Internal server error' });
       }
     }

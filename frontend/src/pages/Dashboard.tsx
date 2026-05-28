@@ -33,7 +33,7 @@ export default function Dashboard() {
 
   const { data: auditData } = useQuery({
     queryKey: ['audit-logs', 'dashboard'],
-    queryFn: () => getAuditLogs({ limit: 50, from: since24h }),
+    queryFn: () => getAuditLogs({ limit: 500, from: since24h }),
   });
 
   const stats = useMemo(() => {
@@ -51,7 +51,7 @@ export default function Dashboard() {
     return { total, office, homeBlocked, offline };
   }, [devices]);
 
-  // Build chart data — hourly buckets for last 24h using audit logs
+  // Build chart data — hourly buckets for last 24h
   const chartData = useMemo(() => {
     const hours: { time: string; home: number; office: number; offline: number }[] = [];
     for (let i = 23; i >= 0; i--) {
@@ -63,8 +63,28 @@ export default function Dashboard() {
         offline: 0,
       });
     }
+
+    // Current hour (last bucket): live counts from WebSocket-backed device list
+    const cur = hours[hours.length - 1];
+    cur.office = devices.filter(
+      (d) => d.online && (d.network === 'office' || d.network === 'OFFICE')
+    ).length;
+    cur.home = devices.filter(
+      (d) => d.online && (d.network === 'home' || d.network === 'HOME')
+    ).length;
+    cur.offline = devices.filter((d) => !d.online).length;
+
+    // Past hours: increment from audit log events (device came online / went offline)
+    for (const log of auditData?.logs ?? []) {
+      const logDate = new Date(log.timestamp);
+      const hourIdx = 23 - Math.floor((now.getTime() - logDate.getTime()) / 3_600_000);
+      if (hourIdx < 0 || hourIdx >= 23) continue;
+      if (log.event === 'device_online') hours[hourIdx].office += 1;
+      if (log.event === 'device_offline') hours[hourIdx].offline += 1;
+    }
+
     return hours;
-  }, []);
+  }, [devices, auditData]);
 
   // Build timeline from audit logs
   const timelineEvents = useMemo(() => {

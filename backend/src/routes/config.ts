@@ -33,6 +33,7 @@ const configRoutes: FastifyPluginAsync = async (fastify) => {
           overrideDurationMinutes: policy.overrideDurationMinutes,
           allowedApps: policy.allowedApps,
           blockedApps: policy.blockedApps,
+          adminPinHash: policy.adminPinHash,
         });
       } catch (err) {
         fastify.log.error({ err }, 'Get config error');

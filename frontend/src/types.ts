@@ -32,6 +32,7 @@ export interface Policy {
   allowedApps: string[];
   blockedApps: string[];
   vpnProfiles: VpnProfile[];
+  adminPinHash: string | null;
   version: number;
   updatedAt: string;
 }
