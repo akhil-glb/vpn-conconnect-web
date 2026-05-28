@@ -98,8 +98,12 @@ export default function PolicyEditor() {
     },
     onError: (err: unknown) => {
       if (err instanceof Error) { setError(err.message); return; }
-      const axiosErr = err as { response?: { data?: { message?: string } } };
-      setError(axiosErr?.response?.data?.message ?? 'Failed to save policy.');
+      const axiosErr = err as { response?: { data?: { error?: string; message?: string } } };
+      setError(
+        axiosErr?.response?.data?.error ??
+        axiosErr?.response?.data?.message ??
+        'Failed to save policy.'
+      );
     },
   });
 

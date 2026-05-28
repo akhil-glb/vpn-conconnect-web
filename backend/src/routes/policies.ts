@@ -82,7 +82,11 @@ const policiesRoutes: FastifyPluginAsync = async (fastify) => {
 
         const policy = await createPolicy(fastify.prisma, serviceData, orgId, user.userId);
         return reply.status(201).send({ policy });
-      } catch (err) {
+      } catch (err: unknown) {
+        const prismaErr = err as { code?: string };
+        if (prismaErr?.code === 'P2002') {
+          return reply.status(409).send({ error: 'A policy with this name already exists' });
+        }
         fastify.log.error({ err }, 'Create policy error');
         return reply.status(500).send({ error: 'Internal server error' });
       }

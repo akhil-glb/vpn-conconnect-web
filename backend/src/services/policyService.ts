@@ -1,4 +1,4 @@
-import { PrismaClient, AuditEvent } from '@prisma/client';
+import { PrismaClient, AuditEvent, Prisma } from '@prisma/client';
 import { log } from './auditService';
 
 export interface PolicyInput {
@@ -54,7 +54,7 @@ export async function createPolicy(
       homeSubnets: data.homeSubnets ?? [],
       blockOnHome: data.blockOnHome ?? true,
       blockOnUnknown: data.blockOnUnknown ?? true,
-      vpnProfiles: data.vpnProfiles ?? [],
+      vpnProfiles: (data.vpnProfiles ?? []) as Prisma.InputJsonValue,
       allowOverride: data.allowOverride ?? false,
       overrideDurationMinutes: data.overrideDurationMinutes ?? 30,
       allowedApps: data.allowedApps ?? [],
@@ -98,7 +98,7 @@ export async function updatePolicy(
       ...(data.homeSubnets !== undefined && { homeSubnets: data.homeSubnets }),
       ...(data.blockOnHome !== undefined && { blockOnHome: data.blockOnHome }),
       ...(data.blockOnUnknown !== undefined && { blockOnUnknown: data.blockOnUnknown }),
-      ...(data.vpnProfiles !== undefined && { vpnProfiles: data.vpnProfiles }),
+      ...(data.vpnProfiles !== undefined && { vpnProfiles: data.vpnProfiles as Prisma.InputJsonValue }),
       ...(data.allowOverride !== undefined && { allowOverride: data.allowOverride }),
       ...(data.overrideDurationMinutes !== undefined && {
         overrideDurationMinutes: data.overrideDurationMinutes,
