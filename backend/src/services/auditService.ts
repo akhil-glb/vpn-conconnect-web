@@ -1,4 +1,4 @@
-import { PrismaClient, AuditEvent } from '@prisma/client';
+import { PrismaClient, AuditEvent, Prisma } from '@prisma/client';
 
 interface LogParams {
   orgId: string;
@@ -25,7 +25,7 @@ export async function log(prisma: PrismaClient, params: LogParams): Promise<void
         deviceId: params.deviceId ?? null,
         adminId: params.adminId ?? null,
         event: params.event,
-        detail: params.detail ?? null,
+        detail: params.detail !== undefined ? params.detail as Prisma.InputJsonValue : Prisma.JsonNull,
       },
     });
   } catch (err) {
@@ -39,7 +39,7 @@ export async function listAuditLogs(
   orgId: string,
   filters: AuditFilters
 ) {
-  const where: Parameters<typeof prisma.auditLog.findMany>[0]['where'] = {
+  const where: Prisma.AuditLogWhereInput = {
     orgId,
     ...(filters.deviceId && { deviceId: filters.deviceId }),
     ...(filters.event && { event: filters.event }),
@@ -77,7 +77,7 @@ export async function exportCsv(
   orgId: string,
   filters: Omit<AuditFilters, 'page' | 'limit'>
 ): Promise<string> {
-  const where: Parameters<typeof prisma.auditLog.findMany>[0]['where'] = {
+  const where: Prisma.AuditLogWhereInput = {
     orgId,
     ...(filters.deviceId && { deviceId: filters.deviceId }),
     ...(filters.event && { event: filters.event }),
