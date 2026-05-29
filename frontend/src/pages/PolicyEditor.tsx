@@ -258,7 +258,8 @@ export default function PolicyEditor() {
                       setNewAllowedApp('');
                     }
                   }}
-                  className="bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 text-sm"
+                  disabled={!newAllowedApp.trim()}
+                  className="bg-green-600 text-white px-3 py-2 rounded hover:bg-green-700 text-sm disabled:opacity-50"
                 >
                   Add
                 </button>
@@ -320,7 +321,8 @@ export default function PolicyEditor() {
                       setNewBlockedApp('');
                     }
                   }}
-                  className="bg-red-600 text-white px-3 py-2 rounded hover:bg-red-700 text-sm"
+                  disabled={!newBlockedApp.trim()}
+                  className="bg-red-600 text-white px-3 py-2 rounded hover:bg-red-700 text-sm disabled:opacity-50"
                 >
                   Add
                 </button>
