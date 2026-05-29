@@ -54,12 +54,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
         const token = await generateAdminToken(fastify, admin.id, admin.role, resolvedOrgId ?? null);
 
-        await log(fastify.prisma, {
-          orgId: resolvedOrgId ?? 'system',
-          adminId: admin.id,
-          event: AuditEvent.ADMIN_LOGIN,
-          detail: { email: admin.email },
-        });
+        if (resolvedOrgId) {
+          await log(fastify.prisma, {
+            orgId: resolvedOrgId,
+            adminId: admin.id,
+            event: AuditEvent.ADMIN_LOGIN,
+            detail: { email: admin.email },
+          });
+        }
 
         return reply.send({
           token,
@@ -86,12 +88,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     async (req: FastifyRequest, reply: FastifyReply) => {
       try {
         const user = req.user as JwtPayload;
-        await log(fastify.prisma, {
-          orgId: user.orgId ?? 'system',
-          adminId: user.userId,
-          event: AuditEvent.ADMIN_LOGOUT,
-          detail: {},
-        });
+        if (user.orgId) {
+          await log(fastify.prisma, {
+            orgId: user.orgId,
+            adminId: user.userId,
+            event: AuditEvent.ADMIN_LOGOUT,
+            detail: {},
+          });
+        }
 
         return reply.status(204).send();
       } catch (err) {
