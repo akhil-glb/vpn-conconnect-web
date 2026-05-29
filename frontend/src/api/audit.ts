@@ -31,3 +31,12 @@ export async function exportAuditLogs(params?: AuditLogsParams): Promise<void> {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+export async function logCopyEvent(fieldName: string): Promise<void> {
+  // fire-and-forget: audit failure must never interrupt the UX
+  try {
+    await apiClient.post('/audit-logs/copy-event', { fieldName });
+  } catch {
+    // silent
+  }
+}

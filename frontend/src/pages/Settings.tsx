@@ -4,6 +4,8 @@ import { useAuthStore } from '../stores/authStore';
 import { generateEnrollmentToken } from '../api/devices';
 import apiClient from '../api/client';
 import type { AdminUser } from '../types';
+import PasswordInput from '../components/PasswordInput';
+import { logCopyEvent } from '../api/audit';
 
 type Tab = 'admins' | 'api-tokens' | 'organization' | 'updates';
 
@@ -246,12 +248,12 @@ export default function Settings() {
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Initial Password</label>
-                    <input
-                      type="password"
+                    <PasswordInput
                       value={invitePassword}
                       onChange={(e) => setInvitePassword(e.target.value)}
                       placeholder="Min 8 characters"
                       className="border rounded px-3 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      onCopy={() => logCopyEvent('invite_password')}
                     />
                   </div>
                   <button
@@ -425,12 +427,13 @@ export default function Settings() {
             <h3 className="text-base font-semibold mb-3">
               Reset password for {resetTarget.email}
             </h3>
-            <input
-              type="password"
-              placeholder="New password (min 8 chars)"
+            <PasswordInput
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="border rounded px-3 py-2 w-full mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              placeholder="New password (min 8 chars)"
+              className="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              wrapperClassName="mb-4"
+              onCopy={() => logCopyEvent('reset_password')}
             />
             <div className="flex gap-3 justify-end">
               <button

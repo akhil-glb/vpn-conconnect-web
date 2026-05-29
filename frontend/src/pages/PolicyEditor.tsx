@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getPolicy, createPolicy, updatePolicy } from '../api/policies';
 import SSIDList from '../components/policies/SSIDList';
 import SubnetList from '../components/policies/SubnetList';
+import PasswordInput from '../components/PasswordInput';
+import { logCopyEvent } from '../api/audit';
 import type { VpnProfile } from '../types';
 
 type Tab = 'home' | 'applications' | 'behavior' | 'vpn';
@@ -409,24 +411,24 @@ export default function PolicyEditor() {
               <div className={`space-y-3 ${clearPin ? 'opacity-40 pointer-events-none' : ''}`}>
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">New PIN (min 4 characters)</label>
-                  <input
-                    type="password"
+                  <PasswordInput
                     value={adminPin}
                     onChange={(e) => setAdminPin(e.target.value)}
                     placeholder="Enter new PIN…"
                     autoComplete="new-password"
                     className="border rounded px-3 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    onCopy={() => logCopyEvent('admin_pin')}
                   />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">Confirm PIN</label>
-                  <input
-                    type="password"
+                  <PasswordInput
                     value={adminPinConfirm}
                     onChange={(e) => setAdminPinConfirm(e.target.value)}
                     placeholder="Confirm PIN…"
                     autoComplete="new-password"
                     className="border rounded px-3 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    onCopy={() => logCopyEvent('admin_pin_confirm')}
                   />
                 </div>
               </div>

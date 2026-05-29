@@ -1,7 +1,8 @@
 import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { AuditEvent } from '@prisma/client';
-import { listAuditLogs, exportCsv } from '../services/auditService';
+import { listAuditLogs, exportCsv, log } from '../services/auditService';
+import { JwtPayload } from '../types';
 
 const auditQuerySchema = z.object({
   deviceId: z.string().optional(),
@@ -85,6 +86,38 @@ const auditRoutes: FastifyPluginAsync = async (fastify) => {
           .send(csv);
       } catch (err) {
         fastify.log.error({ err }, 'Export audit logs error');
+        return reply.status(500).send({ error: 'Internal server error' });
+      }
+    }
+  );
+  const copyEventSchema = z.object({ fieldName: z.string().min(1).max(100) });
+
+  // POST /audit-logs/copy-event
+  fastify.post(
+    '/copy-event',
+    { preHandler: [fastify.authenticate] },
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const orgId = req.orgId;
+        if (!orgId) return reply.status(403).send({ error: 'Organization context required' });
+        const user = req.user as JwtPayload;
+        const parsed = copyEventSchema.safeParse(req.body);
+        if (!parsed.success) {
+          return reply.status(400).send({ error: 'Invalid body', details: parsed.error.flatten() });
+        }
+        await log(fastify.prisma, {
+          orgId,
+          adminId: user.userId,
+          event: AuditEvent.PASSWORD_COPY,
+          detail: {
+            fieldName: parsed.data.fieldName,
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] ?? null,
+          },
+        });
+        return reply.status(204).send();
+      } catch (err) {
+        fastify.log.error({ err }, 'Log copy event error');
         return reply.status(500).send({ error: 'Internal server error' });
       }
     }
