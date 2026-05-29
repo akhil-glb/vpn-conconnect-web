@@ -6,7 +6,7 @@ export async function getGroups(): Promise<Group[]> {
   return response.data.groups;
 }
 
-export async function createGroup(data: { name: string; policyId: string }): Promise<Group> {
+export async function createGroup(data: { name: string; policyId?: string }): Promise<Group> {
   const response = await apiClient.post<Group>('/groups', data);
   return response.data;
 }

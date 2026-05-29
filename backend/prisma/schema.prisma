@@ -76,8 +76,8 @@ model Group {
   org       Organization @relation(fields: [orgId], references: [id])
   orgId     String
   name      String
-  policy    Policy       @relation(fields: [policyId], references: [id])
-  policyId  String
+  policy    Policy?      @relation(fields: [policyId], references: [id])
+  policyId  String?
   devices   Device[]
   createdAt DateTime     @default(now())
 

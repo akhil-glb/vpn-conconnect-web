@@ -46,7 +46,7 @@ export interface VpnProfile {
 export interface Group {
   id: string;
   name: string;
-  policyId: string;
+  policyId: string | null;
   policyName?: string;
   orgId: string;
   deviceCount?: number;

@@ -9,7 +9,7 @@ interface GroupModalProps {
   group?: Group;
   policyOptions: { id: string; name: string }[];
   onClose: () => void;
-  onSave: (data: { name: string; policyId: string }) => void;
+  onSave: (data: { name: string; policyId?: string }) => void;
   saving: boolean;
 }
 
@@ -54,8 +54,8 @@ function GroupModal({ group, policyOptions, onClose, onSave, saving }: GroupModa
             Cancel
           </button>
           <button
-            onClick={() => onSave({ name, policyId })}
-            disabled={saving || !name.trim() || !policyId}
+            onClick={() => onSave({ name, policyId: policyId || undefined })}
+            disabled={saving || !name.trim()}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
           >
             {saving ? 'Saving...' : 'Save'}
@@ -97,7 +97,7 @@ export default function Groups() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { name: string; policyId: string } }) =>
+    mutationFn: ({ id, data }: { id: string; data: { name: string; policyId?: string } }) =>
       updateGroup(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['groups'] });
@@ -114,7 +114,7 @@ export default function Groups() {
     },
   });
 
-  const handleSave = (data: { name: string; policyId: string }) => {
+  const handleSave = (data: { name: string; policyId?: string }) => {
     if (editingGroup) {
       updateMutation.mutate({ id: editingGroup.id, data });
     } else {

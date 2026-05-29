@@ -5,7 +5,7 @@ import { assignDeviceToGroup } from '../services/deviceService';
 
 const createGroupSchema = z.object({
   name: z.string().min(1).max(100),
-  policyId: z.string().min(1),
+  policyId: z.string().min(1).optional(),
 });
 
 const updateGroupSchema = z.object({
@@ -63,17 +63,19 @@ const groupsRoutes: FastifyPluginAsync = async (fastify) => {
           return reply.status(400).send({ error: 'Invalid request body', details: parsed.error.flatten() });
         }
 
-        // Verify policy belongs to org
-        const policy = await fastify.prisma.policy.findFirst({
-          where: { id: parsed.data.policyId, orgId },
-        });
-        if (!policy) return reply.status(404).send({ error: 'Policy not found' });
+        // Verify policy belongs to org (only when provided)
+        if (parsed.data.policyId) {
+          const policy = await fastify.prisma.policy.findFirst({
+            where: { id: parsed.data.policyId, orgId },
+          });
+          if (!policy) return reply.status(404).send({ error: 'Policy not found' });
+        }
 
         const group = await fastify.prisma.group.create({
           data: {
             orgId,
             name: parsed.data.name,
-            policyId: parsed.data.policyId,
+            policyId: parsed.data.policyId ?? null,
           },
           include: { policy: { select: { id: true, name: true } } },
         });
