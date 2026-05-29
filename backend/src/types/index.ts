@@ -64,4 +64,7 @@ declare module 'fastify' {
     prisma: PrismaClient;
     redis: Redis;
   }
+  interface FastifyContextConfig {
+    public?: boolean;
+  }
 }
