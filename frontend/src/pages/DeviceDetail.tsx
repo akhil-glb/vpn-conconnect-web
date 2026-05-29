@@ -9,7 +9,7 @@ import {
   overrideDevice,
   assignDeviceToGroup,
 } from '../api/devices';
-import { getGroups } from '../api/groups';
+import { getGroups, removeDevice } from '../api/groups';
 import { useAuthStore } from '../stores/authStore';
 import DeviceStatusBadge from '../components/devices/DeviceStatusBadge';
 import {
@@ -49,6 +49,8 @@ export default function DeviceDetail() {
   const [statusPage, setStatusPage] = useState(1);
   const [auditPage, setAuditPage] = useState(1);
   const [overrideDuration, setOverrideDuration] = useState(60);
+  const [selectedGroupId, setSelectedGroupId] = useState('');
+  const [groupError, setGroupError] = useState<string | null>(null);
   const LIMIT = 50;
 
   const { data: device, isLoading } = useQuery({
@@ -80,6 +82,10 @@ export default function DeviceDetail() {
     queryFn: getGroups,
   });
 
+  React.useEffect(() => {
+    if (device) setSelectedGroupId(device.groupId ?? '');
+  }, [device?.groupId]);
+
   const overrideMutation = useMutation({
     mutationFn: ({ allow, duration }: { allow: boolean; duration: number }) =>
       overrideDevice(id!, allow, duration),
@@ -87,8 +93,20 @@ export default function DeviceDetail() {
   });
 
   const assignGroupMutation = useMutation({
-    mutationFn: (groupId: string) => assignDeviceToGroup(id!, groupId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['device', id] }),
+    mutationFn: async (groupId: string) => {
+      if (groupId) {
+        await assignDeviceToGroup(id!, groupId);
+      } else if (device?.groupId) {
+        await removeDevice(device.groupId, id!);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['device', id] });
+      setGroupError(null);
+    },
+    onError: () => {
+      setGroupError('Failed to update group. Please try again.');
+    },
   });
 
   // Build VPN session bar chart data — last 30 days
@@ -245,23 +263,29 @@ export default function DeviceDetail() {
       {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-base font-semibold text-gray-700 mb-4">Group Assignment</h2>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <select
-              defaultValue={device.groupId ?? ''}
-              onChange={(e) => {
-                if (e.target.value) assignGroupMutation.mutate(e.target.value);
-              }}
+              value={selectedGroupId}
+              onChange={(e) => { setSelectedGroupId(e.target.value); setGroupError(null); }}
               className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">— No group —</option>
               {groups.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
-                </option>
+                <option key={g.id} value={g.id}>{g.name}</option>
               ))}
             </select>
+            <button
+              onClick={() => assignGroupMutation.mutate(selectedGroupId)}
+              disabled={assignGroupMutation.isPending || selectedGroupId === (device.groupId ?? '')}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 text-sm"
+            >
+              {assignGroupMutation.isPending ? 'Saving...' : 'Save'}
+            </button>
             {assignGroupMutation.isSuccess && (
               <span className="text-green-600 text-sm">Group updated.</span>
+            )}
+            {groupError && (
+              <span className="text-red-600 text-sm">{groupError}</span>
             )}
           </div>
         </div>

@@ -83,5 +83,5 @@ export async function generateEnrollmentToken(): Promise<{ token: string }> {
 }
 
 export async function assignDeviceToGroup(deviceId: string, groupId: string): Promise<void> {
-  await apiClient.post(`/groups/${groupId}/devices`, { deviceId });
+  await apiClient.post(`/groups/${groupId}/devices`, { deviceIds: [deviceId] });
 }
