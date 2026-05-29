@@ -94,10 +94,10 @@ const policiesRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // GET /policies/:id
-  fastify.get(
+  fastify.get<{ Params: { id: string } }>(
     '/:id',
     { preHandler: [fastify.authenticate] },
-    async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (req, reply) => {
       try {
         const orgId = req.orgId;
         if (!orgId) return reply.status(403).send({ error: 'Organization context required' });
@@ -114,10 +114,10 @@ const policiesRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // PUT /policies/:id
-  fastify.put(
+  fastify.put<{ Params: { id: string } }>(
     '/:id',
     { preHandler: [fastify.authenticate] },
-    async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (req, reply) => {
       try {
         const user = req.user as JwtPayload;
         if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
@@ -155,10 +155,10 @@ const policiesRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // DELETE /policies/:id
-  fastify.delete(
+  fastify.delete<{ Params: { id: string } }>(
     '/:id',
     { preHandler: [fastify.authenticate] },
-    async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (req, reply) => {
       try {
         const user = req.user as JwtPayload;
         if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {

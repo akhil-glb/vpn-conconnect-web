@@ -44,10 +44,10 @@ const devicesRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // GET /devices/:id — device detail
-  fastify.get(
+  fastify.get<{ Params: { id: string } }>(
     '/:id',
     { preHandler: [fastify.authenticate] },
-    async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (req, reply) => {
       try {
         const orgId = req.orgId;
         if (!orgId) return reply.status(403).send({ error: 'Organization context required' });
@@ -64,10 +64,10 @@ const devicesRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // DELETE /devices/:id — revoke device
-  fastify.delete(
+  fastify.delete<{ Params: { id: string } }>(
     '/:id',
     { preHandler: [fastify.authenticate] },
-    async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (req, reply) => {
       try {
         const user = req.user as JwtPayload;
         if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
@@ -90,10 +90,10 @@ const devicesRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // GET /devices/:id/status-history
-  fastify.get(
+  fastify.get<{ Params: { id: string }; Querystring: Record<string, string> }>(
     '/:id/status-history',
     { preHandler: [fastify.authenticate] },
-    async (req: FastifyRequest<{ Params: { id: string }; Querystring: Record<string, string> }>, reply: FastifyReply) => {
+    async (req, reply) => {
       try {
         const orgId = req.orgId;
         if (!orgId) return reply.status(403).send({ error: 'Organization context required' });
@@ -117,10 +117,10 @@ const devicesRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // GET /devices/:id/audit-logs
-  fastify.get(
+  fastify.get<{ Params: { id: string }; Querystring: Record<string, string> }>(
     '/:id/audit-logs',
     { preHandler: [fastify.authenticate] },
-    async (req: FastifyRequest<{ Params: { id: string }; Querystring: Record<string, string> }>, reply: FastifyReply) => {
+    async (req, reply) => {
       try {
         const orgId = req.orgId;
         if (!orgId) return reply.status(403).send({ error: 'Organization context required' });
@@ -141,10 +141,10 @@ const devicesRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // GET /devices/:id/vpn-sessions
-  fastify.get(
+  fastify.get<{ Params: { id: string }; Querystring: Record<string, string> }>(
     '/:id/vpn-sessions',
     { preHandler: [fastify.authenticate] },
-    async (req: FastifyRequest<{ Params: { id: string }; Querystring: Record<string, string> }>, reply: FastifyReply) => {
+    async (req, reply) => {
       try {
         const orgId = req.orgId;
         if (!orgId) return reply.status(403).send({ error: 'Organization context required' });
@@ -168,10 +168,10 @@ const devicesRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // POST /devices/:id/override
-  fastify.post(
+  fastify.post<{ Params: { id: string } }>(
     '/:id/override',
     { preHandler: [fastify.authenticate] },
-    async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (req, reply) => {
       try {
         const user = req.user as JwtPayload;
         const orgId = req.orgId;

@@ -87,10 +87,10 @@ const groupsRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // PUT /groups/:id
-  fastify.put(
+  fastify.put<{ Params: { id: string } }>(
     '/:id',
     { preHandler: [fastify.authenticate] },
-    async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (req, reply) => {
       try {
         const user = req.user as JwtPayload;
         if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
@@ -137,10 +137,10 @@ const groupsRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // DELETE /groups/:id
-  fastify.delete(
+  fastify.delete<{ Params: { id: string } }>(
     '/:id',
     { preHandler: [fastify.authenticate] },
-    async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (req, reply) => {
       try {
         const user = req.user as JwtPayload;
         if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
@@ -173,10 +173,10 @@ const groupsRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // POST /groups/:id/devices — assign devices to group
-  fastify.post(
+  fastify.post<{ Params: { id: string } }>(
     '/:id/devices',
     { preHandler: [fastify.authenticate] },
-    async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (req, reply) => {
       try {
         const user = req.user as JwtPayload;
         if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
@@ -221,10 +221,10 @@ const groupsRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // DELETE /groups/:id/devices/:deviceId — remove device from group
-  fastify.delete(
+  fastify.delete<{ Params: { id: string; deviceId: string } }>(
     '/:id/devices/:deviceId',
     { preHandler: [fastify.authenticate] },
-    async (req: FastifyRequest<{ Params: { id: string; deviceId: string } }>, reply: FastifyReply) => {
+    async (req, reply) => {
       try {
         const user = req.user as JwtPayload;
         if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {

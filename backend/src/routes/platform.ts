@@ -91,10 +91,10 @@ const platformRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // GET /platform/orgs/:id
-  fastify.get(
+  fastify.get<{ Params: { id: string } }>(
     '/orgs/:id',
     { preHandler: [fastify.authenticate, requireSuperAdmin] },
-    async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (req, reply) => {
       try {
         const org = await fastify.prisma.organization.findUnique({
           where: { id: req.params.id },
@@ -120,10 +120,10 @@ const platformRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // PATCH /platform/orgs/:id
-  fastify.patch(
+  fastify.patch<{ Params: { id: string } }>(
     '/orgs/:id',
     { preHandler: [fastify.authenticate, requireSuperAdmin] },
-    async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (req, reply) => {
       try {
         const user = req.user as JwtPayload;
         const parsed = updateOrgSchema.safeParse(req.body);
@@ -163,10 +163,10 @@ const platformRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // DELETE /platform/orgs/:id/suspend
-  fastify.delete(
+  fastify.delete<{ Params: { id: string } }>(
     '/orgs/:id/suspend',
     { preHandler: [fastify.authenticate, requireSuperAdmin] },
-    async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (req, reply) => {
       try {
         const user = req.user as JwtPayload;
         const org = await fastify.prisma.organization.findUnique({
@@ -195,10 +195,10 @@ const platformRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // POST /platform/orgs/:id/impersonate
-  fastify.post(
+  fastify.post<{ Params: { id: string } }>(
     '/orgs/:id/impersonate',
     { preHandler: [fastify.authenticate, requireSuperAdmin] },
-    async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (req, reply) => {
       try {
         const user = req.user as JwtPayload;
         const token = await impersonateOrg(fastify, req.params.id, user.userId);

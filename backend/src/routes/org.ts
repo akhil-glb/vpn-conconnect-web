@@ -168,10 +168,10 @@ const orgRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // DELETE /org/admins/:id
-  fastify.delete(
+  fastify.delete<{ Params: { id: string } }>(
     '/admins/:id',
     { preHandler: [fastify.authenticate] },
-    async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (req, reply) => {
       try {
         requireAdminOrHigher(req, reply);
         if (reply.sent) return;
@@ -201,10 +201,10 @@ const orgRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // PUT /org/admins/:id/role
-  fastify.put(
+  fastify.put<{ Params: { id: string } }>(
     '/admins/:id/role',
     { preHandler: [fastify.authenticate] },
-    async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (req, reply) => {
       try {
         requireAdminOrHigher(req, reply);
         if (reply.sent) return;
@@ -244,10 +244,10 @@ const orgRoutes: FastifyPluginAsync = async (fastify) => {
     }
   );
   // PATCH /org/admins/:id/password — reset another admin's password
-  fastify.patch(
+  fastify.patch<{ Params: { id: string } }>(
     '/admins/:id/password',
     { preHandler: [fastify.authenticate] },
-    async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (req, reply) => {
       try {
         requireAdminOrHigher(req, reply);
         if (reply.sent) return;
