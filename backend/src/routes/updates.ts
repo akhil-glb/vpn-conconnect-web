@@ -43,10 +43,10 @@ const updatesRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // GET /updates/download/:version/:os — stream installer file
-  fastify.get(
+  fastify.get<{ Params: { version: string; os: string } }>(
     '/download/:version/:os',
     { preHandler: [fastify.authenticateDevice] },
-    async (req: FastifyRequest<{ Params: { version: string; os: string } }>, reply: FastifyReply) => {
+    async (req, reply) => {
       try {
         const parsed = osParamSchema.safeParse(req.params);
         if (!parsed.success) {

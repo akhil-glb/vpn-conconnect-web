@@ -1,6 +1,6 @@
 import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { NetworkType } from '@prisma/client';
+import { NetworkType, Prisma } from '@prisma/client';
 
 const listQuerySchema = z.object({
   deviceId: z.string().optional(),
@@ -58,7 +58,7 @@ const vpnSessionsRoutes: FastifyPluginAsync = async (fastify) => {
           }
         }
 
-        const where: Parameters<typeof fastify.prisma.vpnSession.findMany>[0]['where'] = {
+        const where: Prisma.VpnSessionWhereInput = {
           orgId,
           ...(deviceId && { deviceId }),
           ...(deviceIds && { deviceId: { in: deviceIds } }),
@@ -128,7 +128,7 @@ const vpnSessionsRoutes: FastifyPluginAsync = async (fastify) => {
           deviceIds = devicesInGroup.map((d) => d.id);
         }
 
-        const where: Parameters<typeof fastify.prisma.vpnSession.findMany>[0]['where'] = {
+        const where: Prisma.VpnSessionWhereInput = {
           orgId,
           ...(deviceId && { deviceId }),
           ...(deviceIds && { deviceId: { in: deviceIds } }),
@@ -256,7 +256,7 @@ const vpnSessionsRoutes: FastifyPluginAsync = async (fastify) => {
           deviceIds = devicesInGroup.map((d) => d.id);
         }
 
-        const where: Parameters<typeof fastify.prisma.vpnSession.findMany>[0]['where'] = {
+        const where: Prisma.VpnSessionWhereInput = {
           orgId,
           ...(deviceId && { deviceId }),
           ...(deviceIds && { deviceId: { in: deviceIds } }),
