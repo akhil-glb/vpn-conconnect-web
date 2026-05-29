@@ -9,10 +9,10 @@ interface DeviceTableProps {
   devices: Device[];
 }
 
-const OS_EMOJI: Record<string, string> = {
-  WINDOWS: '🪟',
-  MACOS: '🍎',
-  LINUX: '🐧',
+const OS_LABELS: Record<string, string> = {
+  WINDOWS: 'Windows',
+  MACOS: 'macOS',
+  LINUX: 'Linux',
 };
 
 function formatLastSeen(ts: string | null): string {
@@ -142,8 +142,8 @@ export default function DeviceTable({ devices }: DeviceTableProps) {
                     </span>
                   )}
                 </td>
-                <td className="p-3 border-b">
-                  <span title={device.os}>{OS_EMOJI[device.os] ?? device.os}</span>
+                <td className="p-3 border-b text-sm text-gray-700">
+                  {OS_LABELS[device.os] ?? device.os}
                 </td>
                 <td className="p-3 border-b text-sm text-gray-600">
                   {device.groupName ?? <span className="text-gray-400">—</span>}

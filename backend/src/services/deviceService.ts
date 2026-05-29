@@ -81,7 +81,11 @@ export async function listDevices(
         }
       }
 
-      return { ...device, liveStatus };
+      return {
+        ...device,
+        groupName: device.group?.name ?? null,
+        liveStatus,
+      };
     })
   );
 
@@ -128,7 +132,12 @@ export async function getDevice(
     }
   }
 
-  return { ...device, recentStatuses, liveStatus };
+  return {
+    ...device,
+    groupName: device.group?.name ?? null,
+    recentStatuses,
+    liveStatus,
+  };
 }
 
 export async function revokeDevice(

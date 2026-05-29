@@ -102,6 +102,7 @@ export default function DeviceDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['device', id] });
+      queryClient.invalidateQueries({ queryKey: ['devices'] });
       setGroupError(null);
     },
     onError: () => {
