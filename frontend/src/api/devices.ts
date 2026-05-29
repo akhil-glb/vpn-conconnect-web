@@ -33,7 +33,7 @@ export async function getDevice(id: string): Promise<DeviceDetail> {
 }
 
 export async function revokeDevice(id: string): Promise<void> {
-  await apiClient.post(`/devices/${id}/revoke`);
+  await apiClient.delete(`/devices/${id}`);
 }
 
 export async function getDeviceStatusHistory(

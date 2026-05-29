@@ -36,6 +36,7 @@ export default function DeviceTable({ devices }: DeviceTableProps) {
   const [filterGroup, setFilterGroup] = useState('');
   const [filterOS, setFilterOS] = useState('');
   const [confirmRevokeId, setConfirmRevokeId] = useState<string | null>(null);
+  const [revokeError, setRevokeError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const queryClient = useQueryClient();
 
@@ -46,6 +47,10 @@ export default function DeviceTable({ devices }: DeviceTableProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['devices'] });
       setConfirmRevokeId(null);
+      setRevokeError(null);
+    },
+    onError: () => {
+      setRevokeError('Failed to revoke device. Please try again.');
     },
   });
 
@@ -206,9 +211,12 @@ export default function DeviceTable({ devices }: DeviceTableProps) {
             <p className="text-gray-600 text-sm mb-4">
               This will permanently revoke the device's access. The device will no longer be able to authenticate.
             </p>
+            {revokeError && (
+              <p className="text-red-600 text-sm mb-3">{revokeError}</p>
+            )}
             <div className="flex gap-3 justify-end">
               <button
-                onClick={() => setConfirmRevokeId(null)}
+                onClick={() => { setConfirmRevokeId(null); setRevokeError(null); }}
                 className="bg-white text-gray-700 border px-4 py-2 rounded hover:bg-gray-50"
               >
                 Cancel
