@@ -11,14 +11,6 @@ apiClient.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-
-  // Extract org slug from hostname — first segment before the first dot
-  const hostname = window.location.hostname;
-  const orgSlug = hostname.split('.')[0] ?? '';
-  if (orgSlug) {
-    config.headers['X-Org-Slug'] = orgSlug;
-  }
-
   return config;
 });
 
