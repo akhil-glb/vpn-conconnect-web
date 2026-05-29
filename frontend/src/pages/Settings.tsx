@@ -241,6 +241,7 @@ export default function Settings() {
                     <label className="block text-xs text-gray-500 mb-1">Email</label>
                     <input
                       type="email"
+                      autoComplete="off"
                       value={inviteForm.email}
                       onChange={(e) => setInviteForm((prev) => ({ ...prev, email: e.target.value }))}
                       placeholder="admin@example.com"
@@ -262,6 +263,7 @@ export default function Settings() {
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Initial Password</label>
                     <PasswordInput
+                      autoComplete="new-password"
                       value={invitePassword}
                       onChange={(e) => setInvitePassword(e.target.value)}
                       placeholder="Min 8 characters"
