@@ -21,8 +21,12 @@ export default function Login() {
       setAuth(token, user);
       navigate(user.role === 'SUPER_ADMIN' ? '/platform' : '/dashboard');
     } catch (err: unknown) {
-      const axiosErr = err as { response?: { data?: { message?: string } } };
-      setError(axiosErr?.response?.data?.message ?? 'Invalid email or password.');
+      const axiosErr = err as { response?: { data?: { error?: string; message?: string } } };
+      setError(
+        axiosErr?.response?.data?.error ??
+        axiosErr?.response?.data?.message ??
+        'Invalid email or password.'
+      );
     } finally {
       setLoading(false);
     }
