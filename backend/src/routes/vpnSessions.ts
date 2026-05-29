@@ -81,7 +81,17 @@ const vpnSessionsRoutes: FastifyPluginAsync = async (fastify) => {
           fastify.prisma.vpnSession.findMany({
             where,
             include: {
-              device: { select: { id: true, name: true, os: true, group: { select: { id: true, name: true } } } },
+              device: {
+                select: {
+                  id: true, name: true, os: true,
+                  group: {
+                    select: {
+                      id: true, name: true,
+                      policy: { select: { vpnProfiles: true } },
+                    },
+                  },
+                },
+              },
             },
             orderBy: { connectedAt: 'desc' },
             skip,
@@ -89,11 +99,19 @@ const vpnSessionsRoutes: FastifyPluginAsync = async (fastify) => {
           }),
         ]);
 
-        const sessions = rawSessions.map(({ device, ...s }) => ({
-          ...s,
-          deviceName: device.name,
-          groupName: device.group?.name ?? null,
-        }));
+        const sessions = rawSessions.map(({ device, ...s }) => {
+          const vpnProfiles = (device.group?.policy?.vpnProfiles ?? []) as Array<{
+            name: string; serverAddress?: string; tunnelType?: string;
+          }>;
+          const matched = vpnProfiles.find((p) => p.name === s.vpnProfileName);
+          return {
+            ...s,
+            deviceName: device.name,
+            groupName: device.group?.name ?? null,
+            vpnServerAddress: matched?.serverAddress ?? null,
+            vpnTunnelType: matched?.tunnelType ?? null,
+          };
+        });
 
         return reply.send({ sessions, total, page, limit });
       } catch (err) {

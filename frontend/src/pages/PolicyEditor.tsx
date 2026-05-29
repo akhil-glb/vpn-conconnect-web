@@ -6,7 +6,32 @@ import SSIDList from '../components/policies/SSIDList';
 import SubnetList from '../components/policies/SubnetList';
 import PasswordInput from '../components/PasswordInput';
 import { logCopyEvent } from '../api/audit';
-import type { VpnProfile } from '../types';
+import type { VpnProfile, VpnTunnelType, VpnAuthMethod, VpnEncryptionLevel } from '../types';
+
+const AUTH_METHODS: Record<VpnTunnelType, { value: VpnAuthMethod; label: string }[]> = {
+  L2TP:      [{ value: 'MSChapV2', label: 'MS-CHAPv2' }, { value: 'Chap', label: 'CHAP' }, { value: 'Pap', label: 'PAP' }, { value: 'EAP', label: 'EAP' }],
+  IKEv2:     [{ value: 'EAP', label: 'EAP (User)' }, { value: 'MachineCertificate', label: 'Machine Certificate' }],
+  PPTP:      [{ value: 'MSChapV2', label: 'MS-CHAPv2' }, { value: 'Chap', label: 'CHAP' }, { value: 'Pap', label: 'PAP' }],
+  SSTP:      [{ value: 'MSChapV2', label: 'MS-CHAPv2' }, { value: 'Chap', label: 'CHAP' }, { value: 'EAP', label: 'EAP' }],
+  Automatic: [{ value: 'MSChapV2', label: 'MS-CHAPv2' }, { value: 'EAP', label: 'EAP' }],
+};
+
+const ENCRYPTION_LEVELS: { value: VpnEncryptionLevel; label: string }[] = [
+  { value: 'NoEncryption', label: 'No Encryption' },
+  { value: 'Optional', label: 'Optional' },
+  { value: 'Required', label: 'Required' },
+  { value: 'Maximum', label: 'Maximum' },
+  { value: 'Custom', label: 'Custom' },
+];
+
+const INITIAL_VPN_PROFILE = {
+  name: '', displayName: '', serverAddress: '',
+  tunnelType: 'L2TP' as VpnTunnelType,
+  l2tpPsk: '',
+  authenticationMethod: 'MSChapV2' as VpnAuthMethod,
+  encryptionLevel: 'Required' as VpnEncryptionLevel,
+  rememberCredential: true,
+};
 
 type Tab = 'home' | 'applications' | 'behavior' | 'vpn';
 
@@ -48,7 +73,7 @@ export default function PolicyEditor() {
   const [form, setForm] = useState<PolicyFormState>(DEFAULT_FORM);
   const [newAllowedApp, setNewAllowedApp] = useState('');
   const [newBlockedApp, setNewBlockedApp] = useState('');
-  const [newVpnProfile, setNewVpnProfile] = useState({ name: '', displayName: '' });
+  const [newVpnProfile, setNewVpnProfile] = useState(INITIAL_VPN_PROFILE);
   const [adminPin, setAdminPin] = useState('');
   const [adminPinConfirm, setAdminPinConfirm] = useState('');
   const [clearPin, setClearPin] = useState(false);
@@ -484,6 +509,14 @@ export default function PolicyEditor() {
                       <label className="text-xs text-gray-500">Display name</label>
                       <p className="text-sm">{profile.displayName}</p>
                     </div>
+                    <div>
+                      <label className="text-xs text-gray-500">Server</label>
+                      <p className="text-sm font-mono">{profile.serverAddress}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500">Tunnel · Auth</label>
+                      <p className="text-sm">{profile.tunnelType} · {profile.authenticationMethod}</p>
+                    </div>
                   </div>
                   {profile.isDefault && (
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
@@ -508,47 +541,144 @@ export default function PolicyEditor() {
 
             <div className="border rounded p-4 bg-gray-50">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Add VPN Profile</h3>
-              <div className="grid grid-cols-2 gap-3 mb-3">
+              <div className="space-y-3">
+                {/* Row 1: Internal name + Display name */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Internal name <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      value={newVpnProfile.name}
+                      onChange={(e) => setNewVpnProfile((prev) => ({ ...prev, name: e.target.value }))}
+                      placeholder="Office-vpn"
+                      className="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Display name <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      value={newVpnProfile.displayName}
+                      onChange={(e) => setNewVpnProfile((prev) => ({ ...prev, displayName: e.target.value }))}
+                      placeholder="Office VPN"
+                      className="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 2: Server address */}
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Internal name</label>
+                  <label className="block text-xs text-gray-500 mb-1">Server Address <span className="text-red-500">*</span></label>
                   <input
                     type="text"
-                    value={newVpnProfile.name}
-                    onChange={(e) =>
-                      setNewVpnProfile((prev) => ({ ...prev, name: e.target.value }))
-                    }
-                    placeholder="corp-vpn"
+                    value={newVpnProfile.serverAddress}
+                    onChange={(e) => setNewVpnProfile((prev) => ({ ...prev, serverAddress: e.target.value }))}
+                    placeholder="16.1.8.16 or vpn.company.com"
                     className="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Display name</label>
-                  <input
-                    type="text"
-                    value={newVpnProfile.displayName}
-                    onChange={(e) =>
-                      setNewVpnProfile((prev) => ({ ...prev, displayName: e.target.value }))
-                    }
-                    placeholder="Corporate VPN"
-                    className="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
+
+                {/* Row 3: Tunnel type + Encryption level */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Tunnel Type</label>
+                    <select
+                      value={newVpnProfile.tunnelType}
+                      onChange={(e) => {
+                        const tt = e.target.value as VpnTunnelType;
+                        setNewVpnProfile((prev) => ({
+                          ...prev,
+                          tunnelType: tt,
+                          authenticationMethod: AUTH_METHODS[tt][0].value,
+                        }));
+                      }}
+                      className="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    >
+                      {(['L2TP', 'IKEv2', 'PPTP', 'SSTP', 'Automatic'] as VpnTunnelType[]).map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Encryption Level</label>
+                    <select
+                      value={newVpnProfile.encryptionLevel}
+                      onChange={(e) => setNewVpnProfile((prev) => ({ ...prev, encryptionLevel: e.target.value as VpnEncryptionLevel }))}
+                      className="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    >
+                      {ENCRYPTION_LEVELS.map((el) => (
+                        <option key={el.value} value={el.value}>{el.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Row 4: L2TP PSK (conditional) */}
+                {newVpnProfile.tunnelType === 'L2TP' && (
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">L2TP Pre-Shared Key</label>
+                    <PasswordInput
+                      value={newVpnProfile.l2tpPsk}
+                      onChange={(e) => setNewVpnProfile((prev) => ({ ...prev, l2tpPsk: e.target.value }))}
+                      placeholder="Pre-shared key for IPSec…"
+                      autoComplete="new-password"
+                      className="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                  </div>
+                )}
+
+                {/* Row 5: Auth method + Remember credential */}
+                <div className="grid grid-cols-2 gap-3 items-end">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Authentication Method</label>
+                    <select
+                      value={newVpnProfile.authenticationMethod}
+                      onChange={(e) => setNewVpnProfile((prev) => ({ ...prev, authenticationMethod: e.target.value as VpnAuthMethod }))}
+                      className="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    >
+                      {AUTH_METHODS[newVpnProfile.tunnelType].map((m) => (
+                        <option key={m.value} value={m.value}>{m.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer pb-2">
+                    <input
+                      type="checkbox"
+                      checked={newVpnProfile.rememberCredential}
+                      onChange={(e) => setNewVpnProfile((prev) => ({ ...prev, rememberCredential: e.target.checked }))}
+                    />
+                    Remember credential
+                  </label>
                 </div>
               </div>
+
               <button
                 type="button"
                 onClick={() => {
                   const n = newVpnProfile.name.trim();
                   const d = newVpnProfile.displayName.trim();
-                  if (n && d) {
+                  const s = newVpnProfile.serverAddress.trim();
+                  if (n && d && s) {
                     const isDefault = form.vpnProfiles.length === 0;
                     setField('vpnProfiles', [
                       ...form.vpnProfiles,
-                      { name: n, displayName: d, isDefault },
+                      {
+                        name: n,
+                        displayName: d,
+                        isDefault,
+                        serverAddress: s,
+                        tunnelType: newVpnProfile.tunnelType,
+                        l2tpPsk: newVpnProfile.l2tpPsk.trim() || undefined,
+                        authenticationMethod: newVpnProfile.authenticationMethod,
+                        encryptionLevel: newVpnProfile.encryptionLevel,
+                        rememberCredential: newVpnProfile.rememberCredential,
+                      },
                     ]);
-                    setNewVpnProfile({ name: '', displayName: '' });
+                    setNewVpnProfile(INITIAL_VPN_PROFILE);
                   }
                 }}
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm"
+                disabled={!newVpnProfile.name.trim() || !newVpnProfile.displayName.trim() || !newVpnProfile.serverAddress.trim()}
+                className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm disabled:opacity-50"
               >
                 Add Profile
               </button>

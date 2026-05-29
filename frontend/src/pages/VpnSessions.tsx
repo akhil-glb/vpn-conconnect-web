@@ -187,7 +187,12 @@ export default function VpnSessions() {
                       {s.groupName ?? '—'}
                     </td>
                     <td className="p-3 border-b text-sm text-gray-600">
-                      {s.vpnProfileDisplay ?? s.vpnProfileName ?? '—'}
+                      <div>{s.vpnProfileDisplay ?? s.vpnProfileName ?? '—'}</div>
+                      {s.vpnServerAddress && (
+                        <div className="text-xs text-gray-400 mt-0.5">
+                          {s.vpnServerAddress} · {s.vpnTunnelType}
+                        </div>
+                      )}
                     </td>
                     <td className="p-3 border-b text-sm">{formatDate(s.connectedAt)}</td>
                     <td className="p-3 border-b text-sm">{formatDate(s.disconnectedAt)}</td>

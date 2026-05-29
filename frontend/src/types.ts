@@ -37,10 +37,20 @@ export interface Policy {
   updatedAt: string;
 }
 
+export type VpnTunnelType = 'L2TP' | 'IKEv2' | 'PPTP' | 'SSTP' | 'Automatic';
+export type VpnAuthMethod = 'MSChapV2' | 'Chap' | 'Pap' | 'EAP' | 'MachineCertificate';
+export type VpnEncryptionLevel = 'NoEncryption' | 'Optional' | 'Required' | 'Maximum' | 'Custom';
+
 export interface VpnProfile {
   name: string;
   displayName: string;
   isDefault: boolean;
+  serverAddress: string;
+  tunnelType: VpnTunnelType;
+  l2tpPsk?: string;
+  authenticationMethod: VpnAuthMethod;
+  encryptionLevel: VpnEncryptionLevel;
+  rememberCredential: boolean;
 }
 
 export interface Group {
@@ -77,6 +87,8 @@ export interface VpnSession {
   disconnectedAt: string | null;
   durationSeconds: number | null;
   terminatedBy: string | null;
+  vpnServerAddress?: string | null;
+  vpnTunnelType?: string | null;
 }
 
 export interface AdminUser {
