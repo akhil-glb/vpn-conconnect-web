@@ -20,6 +20,7 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState<Tab>('admins');
   const [enrollToken, setEnrollToken] = useState('');
   const [showToken, setShowToken] = useState(false);
+  const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteForm, setInviteForm] = useState<InviteFormState>({ email: '', role: 'ADMIN' });
   const [invitePassword, setInvitePassword] = useState('');
   const [inviteError, setInviteError] = useState('');
@@ -69,6 +70,7 @@ export default function Settings() {
       setInviteForm({ email: '', role: 'ADMIN' });
       setInvitePassword('');
       setInviteError('');
+      setShowInviteForm(false);
     },
     onError: (err: unknown) => {
       const axiosErr = err as { response?: { data?: { error?: string } } };
@@ -150,7 +152,18 @@ export default function Settings() {
         {/* Admin Users */}
         {activeTab === 'admins' && (
           <div>
-            <h2 className="text-base font-semibold text-gray-700 mb-4">Admin Users</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-gray-700">Admin Users</h2>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setShowInviteForm((v) => !v)}
+                  className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+                >
+                  {showInviteForm ? 'Cancel' : 'Create User'}
+                </button>
+              )}
+            </div>
 
             {adminsLoading ? (
               <p className="text-gray-400">Loading admins...</p>
@@ -219,11 +232,11 @@ export default function Settings() {
               </table>
             )}
 
-            {/* Invite Form */}
-            {isAdmin && (
-              <div className="border rounded p-4 bg-gray-50">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Invite Admin</h3>
-                <div className="flex gap-3 items-end flex-wrap">
+            {/* Create User Form */}
+            {isAdmin && showInviteForm && (
+              <div className="border rounded p-4 bg-gray-50 mb-6">
+                <h3 className="text-sm font-semibold text-gray-700 mb-4">Create User</h3>
+                <div className="max-w-sm space-y-3">
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Email</label>
                     <input
@@ -231,7 +244,7 @@ export default function Settings() {
                       value={inviteForm.email}
                       onChange={(e) => setInviteForm((prev) => ({ ...prev, email: e.target.value }))}
                       placeholder="admin@example.com"
-                      className="border rounded px-3 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      className="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     />
                   </div>
                   <div>
@@ -239,7 +252,7 @@ export default function Settings() {
                     <select
                       value={inviteForm.role}
                       onChange={(e) => setInviteForm((prev) => ({ ...prev, role: e.target.value }))}
-                      className="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      className="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     >
                       <option value="ADMIN">Admin</option>
                       <option value="SUPER_ADMIN">Super Admin</option>
@@ -252,23 +265,23 @@ export default function Settings() {
                       value={invitePassword}
                       onChange={(e) => setInvitePassword(e.target.value)}
                       placeholder="Min 8 characters"
-                      className="border rounded px-3 py-2 w-48 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      className="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                       onCopy={() => logCopyEvent('invite_password')}
                     />
                   </div>
                   <button
                     onClick={() => inviteMutation.mutate({ ...inviteForm, password: invitePassword })}
                     disabled={inviteMutation.isPending || !inviteForm.email || invitePassword.length < 8}
-                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 text-sm"
+                    className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 text-sm"
                   >
-                    {inviteMutation.isPending ? 'Creating...' : 'Create Admin'}
+                    {inviteMutation.isPending ? 'Creating...' : 'Create User'}
                   </button>
                 </div>
                 {inviteError && (
                   <p className="text-red-600 text-sm mt-2">{inviteError}</p>
                 )}
                 {inviteMutation.isSuccess && (
-                  <p className="text-green-600 text-sm mt-2">Invite sent successfully.</p>
+                  <p className="text-green-600 text-sm mt-2">User created successfully.</p>
                 )}
               </div>
             )}
