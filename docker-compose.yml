@@ -32,45 +32,6 @@ services:
       timeout: 3s
       retries: 10
 
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      NODE_ENV: production
-      PORT: 3000
-      HOST: 0.0.0.0
-      DATABASE_URL: postgresql://vpncc:vpncc@postgres:5432/vpnconconnect
-      REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRY: ${JWT_EXPIRY:-8h}
-      DEVICE_TOKEN_SECRET: ${DEVICE_TOKEN_SECRET}
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
-      UPDATE_FILES_PATH: /app/updates
-    ports:
-      - "3301:3000"
-    volumes:
-      - update_files:/app/updates
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3000}
-    restart: unless-stopped
-    depends_on:
-      - backend
-    ports:
-      - "3302:80"
-
 volumes:
   postgres_data:
   redis_data:
-  update_files:
