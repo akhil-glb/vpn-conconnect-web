@@ -8,11 +8,13 @@ import {
   getDeviceVpnSessions,
   generateEnrollmentToken,
   assignDeviceToGroup,
+  enrollDevice,
 } from '../services/deviceService';
+import { consumeEnrollmentToken } from '../services/authService';
 import { listAuditLogs } from '../services/auditService';
 import { setDeviceOverride } from '../services/statusService';
 import { JwtPayload } from '../types';
-import { AuditEvent } from '@prisma/client';
+import { AuditEvent, OsType } from '@prisma/client';
 
 const overrideSchema = z.object({
   allow: z.boolean(),
@@ -22,6 +24,12 @@ const overrideSchema = z.object({
 const paginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+const enrollSchema = z.object({
+  enrollmentToken: z.string().min(1),
+  hostname:        z.string().min(1).max(255),
+  os:              z.enum(['WINDOWS', 'MACOS', 'LINUX']),
 });
 
 const devicesRoutes: FastifyPluginAsync = async (fastify) => {
@@ -208,6 +216,44 @@ const devicesRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.send({ override });
       } catch (err) {
         fastify.log.error({ err }, 'Override error');
+        return reply.status(500).send({ error: 'Internal server error' });
+      }
+    }
+  );
+
+  // POST /devices/enroll — called by the C++ service on first-time device setup (no auth required)
+  fastify.post(
+    '/enroll',
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const parsed = enrollSchema.safeParse(req.body);
+        if (!parsed.success) {
+          return reply.status(400).send({ error: 'Invalid request body', details: parsed.error.flatten() });
+        }
+
+        const { enrollmentToken, hostname, os } = parsed.data;
+
+        const enrollmentData = await consumeEnrollmentToken(fastify.redis, enrollmentToken);
+        if (!enrollmentData) {
+          return reply.status(401).send({ error: 'Invalid or expired enrollment token' });
+        }
+
+        const { deviceToken } = await enrollDevice(
+          fastify.prisma,
+          fastify.redis,
+          enrollmentData,
+          hostname,
+          os as OsType,
+          enrollmentData.adminId
+        );
+
+        return reply.send({ deviceToken });
+      } catch (err: unknown) {
+        if (err instanceof Error &&
+            (err.message.includes('Device limit') || err.message.includes('Organization not found'))) {
+          return reply.status(400).send({ error: err.message });
+        }
+        fastify.log.error({ err }, 'Device enrollment error');
         return reply.status(500).send({ error: 'Internal server error' });
       }
     }
